@@ -51,19 +51,17 @@ def delete_note(id):
 def create_collection():
     data = request.get_json()
 
-    # Step 1: Create the collection first
     new_collection = Collection(title=data['title'])
     db.session.add(new_collection)
-    db.session.commit()  # Commit first to generate ID
+    db.session.commit()
 
-    # Step 2: Add notes to the collection (if provided)
-    note_ids = data.get('notes', [])  # Get note IDs, default to empty list
+    note_ids = data.get('notes', [])
     if note_ids:
-        notes = Note.query.filter(Note.id.in_(note_ids)).all()  # Fetch valid notes
+        notes = Note.query.filter(Note.id.in_(note_ids)).all()
         for note in notes:
-            note.collection_id = new_collection.id  # Assign collection to each note
+            note.collection_id = new_collection.id
 
-    db.session.commit()  # Save changes
+    db.session.commit()
 
     return jsonify({
         "message": "Collection created!",
@@ -87,25 +85,23 @@ def update_collection(id):
 
 @collections_bp.route('/collections/<int:id>/add_notes', methods=['POST'])
 def add_notes_to_collection(id):
-    collections = Collection.query.get_or_404(id)  # Get the collection by ID
+    collections = Collection.query.get_or_404(id)
     data = request.get_json()
 
-    note_ids = data.get('notes', [])  # Get list of note IDs (default to empty list)
+    note_ids = data.get('notes', [])
 
     if not isinstance(note_ids, list):
         return jsonify({"error": "note_ids must be a list"}), 400
 
-    # Fetch valid Note objects
     valid_notes = Note.query.filter(Note.id.in_(note_ids)).all()
 
     if not valid_notes:
         return jsonify({"error": "No valid notes found"}), 400
 
-    # Add Note objects to the collection
     for note in valid_notes:
-        note.collection_id = collections.id  # Assign the collection ID to each note
+        note.collection_id = collections.id
 
-    db.session.commit()  # Save changes
+    db.session.commit()
 
     return jsonify({
         "message": "Notes added to collection!",
