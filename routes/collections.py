@@ -30,7 +30,7 @@ def create_collection():
     }), 201
 
 @collections_bp.route('/collections', methods=['GET'])
-def get_collections():
+def get_all_collections():
     collections = Collection.query.all()
     return jsonify([returningCollection.to_dict() for returningCollection in collections])
 
@@ -44,14 +44,16 @@ def update_collection(id):
     collections = Collection.query.get_or_404(id)
     data = request.get_json()
     collections.title = data['title']
-    collections.list_of_notes = data.get('notes', [])
     db.session.commit()
     return jsonify({"message": "Collection updated!", "collection": collections.to_dict()})
 
 
 @collections_bp.route('/collections/<int:id>/add_notes', methods=['POST'])
 def add_notes_to_collection(id):
-    collections = Collection.query.get_or_404(id)
+    collections = Collection.query.get(id)
+    if not collections:
+        return jsonify({"message": "Collection not found!",
+                        "status_code": 404})
     data = request.get_json()
 
     note_ids = data.get('notes', [])
