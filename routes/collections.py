@@ -78,19 +78,36 @@ def add_notes_to_collection(id):
 
 @collections_bp.route('/collections/<int:id>/remove_notes', methods=['DELETE'])
 def remove_notes_from_collection(id):
-    collections = Collection.query.get_or_404(id)
+    collection = Collection.query.get(id)
+    if not collection:
+        return jsonify({"message": "Collection not found!", "status_code": 404}), 404
+    print(collection)
+
     data = request.get_json()
     note_ids = data.get('notes', [])
-    if not isinstance(note_ids, list):
-        return jsonify({"error": "note_ids must be a list"}), 400
-    for note_id in note_ids:
-        note = Note.query.get_or_404(note_id)
-        db.session.delete(note)
-        db.session.commit()
-    return jsonify({"message": "Notes removed from collection!",
-                    "collection": collections.to_dict()}), 200
 
-@collections_bp.route('/collections/<int:id>/remove_collection', methods=['DELETE'])
+    if not isinstance(note_ids, list):
+        return jsonify({"error": "notes must be a list"}), 400
+
+    # Ensure only notes that are in the collection are removed
+    removed_notes = []
+    for note_id in note_ids:
+        note = Note.query.get(note_id)
+        if not note or note not in collection.list_of_notes:
+            return jsonify({"error": f"Note ID {note_id} is not in this collection"}), 400
+
+        collection.list_of_notes.remove(note)  # Removes association instead of deleting the note
+        removed_notes.append(note_id)
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Notes removed from collection!",
+        "removed_notes": removed_notes,
+        "collection": collection.to_dict()
+    }), 200
+
+@collections_bp.route('/collections/<int:id>/', methods=['DELETE'])
 def delete_collection(id):
     collection = Collection.query.get_or_404(id)
     db.session.delete(collection)
