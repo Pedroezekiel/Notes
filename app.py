@@ -2,8 +2,8 @@ from flask import Flask
 from flask_migrate import Migrate
 from config import Config
 from database import db
-from routes import notes_bp
-from routes import collections_bp
+from routes.notes import notes_bp
+from routes.collections import collections_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
