@@ -1,9 +1,10 @@
 from extensions import bcrypt
 from database import db
+import uuid
 
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(50), nullable=False, unique=True)
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    username = db.Column(db.String(50), nullable=False, unique=False)
     email = db.Column(db.String(120), nullable=False, unique=True)
     password_hash = db.Column(db.String(256), nullable=False)
 

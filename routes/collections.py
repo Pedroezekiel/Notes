@@ -8,14 +8,14 @@ from models.Note import Note
 from models.Collection import Collection
 
 collections_bp = Blueprint('collections', __name__)
-# user_id = get_jwt_identity()
 
 @collections_bp.route('/collections', methods=['POST'])
 @jwt_required()
 def create_collection():
+    user_id = get_jwt_identity()
     data = request.get_json()
 
-    new_collection = Collection(title=data['title'])
+    new_collection = Collection(title=data['title'], user_id=user_id)
     db.session.add(new_collection)
     db.session.commit()
 

@@ -27,7 +27,7 @@ def get_notes():
     return jsonify([note.to_dict() for note in notes])
 
 # Get a single note by ID
-@notes_bp.route('/notes/<int:id>', methods=['GET'])
+@notes_bp.route('/notes/<string:id>', methods=['GET'])
 @jwt_required()
 def get_note(id):
     note = Note.query.filter_by(id=id, user_id=get_jwt_identity()).first()
@@ -37,10 +37,10 @@ def get_note(id):
     return jsonify(note.to_dict())
 
 # Update a note
-@notes_bp.route('/notes/<int:id>', methods=['PUT'])
+@notes_bp.route('/notes/<string:id>', methods=['PUT'])
 @jwt_required()
 def update_note(id):
-    note = Note.query.filter_by(id=id, user_id=get_jwt_identity())
+    note = Note.query.filter_by(id=id, user_id=get_jwt_identity()).first()
     if not note:
         return (jsonify
     ({"message": "Note not found!", "status_code": 404}))
@@ -54,7 +54,7 @@ def update_note(id):
     return jsonify({"message": "Note updated!", "note": note.to_dict()})
 
 # Delete a note
-@notes_bp.route('/notes/<int:id>', methods=['DELETE'])
+@notes_bp.route('/notes/<string:id>', methods=['DELETE'])
 @jwt_required()
 def delete_note(id):
     user_id = get_jwt_identity()
