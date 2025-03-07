@@ -20,7 +20,7 @@ def create_collection():
     note_ids = data.get('notes', [])
     print(note_ids)
     if note_ids:
-        notes = Note.query.filter(Note.id.in_(note_ids),Note.user_id==user_id).all()
+        notes = Note.query.filter(Note.id.in_(set(note_ids)),Note.user_id==user_id).all()
         print(notes, "=============-=-=-=-=-=-=-=-")
         for note in notes:
             new_collection.list_of_notes.append(note.id)
@@ -74,14 +74,15 @@ def add_notes_to_collection(id):
     if not isinstance(note_ids, list):
         return jsonify({"error": "note_ids must be a list"}), 400
 
-    valid_notes = Note.query.filter(Note.id.in_(note_ids), Note.user_id==user_id).all()
+    valid_notes = Note.query.filter(Note.id.in_(set(note_ids)), Note.user_id==user_id).all()
 
     if not valid_notes:
         return jsonify({"error": "No valid notes found"}), 400
 
     for note in valid_notes:
         print(note.id)
-        collections.list_of_notes.append(note.id)
+        if note.id not in collections.list_of_notes:
+            collections.list_of_notes.append(note.id)
     print(collections.list_of_notes)
 
     flag_modified(collections, "list_of_notes")
