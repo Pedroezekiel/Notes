@@ -5,6 +5,7 @@ class Note(db.Model):
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
     collection_id = db.Column(db.Integer, db.ForeignKey('collection.id'), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
 
     def to_dict(self):
         return {
