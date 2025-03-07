@@ -1,4 +1,5 @@
 from flask import Blueprint,request,jsonify
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy.orm.collections import collection
 
 from database import db
@@ -7,8 +8,10 @@ from models.Note import Note
 from models.Collection import Collection
 
 collections_bp = Blueprint('collections', __name__)
+# user_id = get_jwt_identity()
 
 @collections_bp.route('/collections', methods=['POST'])
+@jwt_required()
 def create_collection():
     data = request.get_json()
 
@@ -30,18 +33,26 @@ def create_collection():
     }), 201
 
 @collections_bp.route('/collections', methods=['GET'])
+@jwt_required()
 def get_all_collections():
-    collections = Collection.query.all()
+    user_id = get_jwt_identity()
+    collections = Collection.query.filter_by(user_id=user_id).all()
+    if not collections:
+        return jsonify({"error": "collection not found"}), 404
     return jsonify([returningCollection.to_dict() for returningCollection in collections])
 
 @collections_bp.route('/collections/<int:id>', methods=['GET'])
 def get_collections(id):
-    collections = Collection.query.get_or_404(id)
+    collections = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
+    if not collections:
+        return jsonify({"error": "collection not found"}), 404
     return jsonify(collections.to_dict())
 
 @collections_bp.route('/collections/<int:id>', methods=['PUT'])
 def update_collection(id):
-    collections = Collection.query.get_or_404(id)
+    collections = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
+    if not collections:
+        return jsonify({"error": "collection not found"}), 404
     data = request.get_json()
     collections.title = data['title']
     db.session.commit()
@@ -50,7 +61,8 @@ def update_collection(id):
 
 @collections_bp.route('/collections/<int:id>/add_notes', methods=['POST'])
 def add_notes_to_collection(id):
-    collections = Collection.query.get(id)
+    user_id = get_jwt_identity()
+    collections = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
     if not collections:
         return jsonify({"message": "Collection not found!",
                         "status_code": 404})
@@ -78,9 +90,9 @@ def add_notes_to_collection(id):
 
 @collections_bp.route('/collections/<int:id>/remove_notes', methods=['DELETE'])
 def remove_notes_from_collection(id):
-    collection = Collection.query.get(id)
+    collection = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
     if not collection:
-        return jsonify({"message": "Collection not found!", "status_code": 404}), 404
+        return jsonify({"message": "Collection not found!"}), 404
     print(collection)
 
     data = request.get_json()
@@ -109,7 +121,10 @@ def remove_notes_from_collection(id):
 
 @collections_bp.route('/collections/<int:id>/', methods=['DELETE'])
 def delete_collection(id):
-    collection = Collection.query.get_or_404(id)
+    user_id = get_jwt_identity()
+    collection = Collection.query.filter_by(id=id,user_id=user_id).first()
+    if not collection:
+        return jsonify({"message": "Collection not found!"}), 404
     db.session.delete(collection)
     db.session.commit()
     return jsonify({"message": "Collection deleted!"})

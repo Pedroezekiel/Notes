@@ -57,11 +57,9 @@ def update_note(id):
 @notes_bp.route('/notes/<int:id>', methods=['DELETE'])
 @jwt_required()
 def delete_note(id):
-    print(f"Delete note: {get_jwt_identity()}")
-    note = Note.query.filter_by(id=id, user_id=get_jwt_identity()).first()
-    print(note, "[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]")
+    user_id = get_jwt_identity()
+    note = Note.query.filter_by(id=id, user_id=user_id).first()
     if not note:
-        print(note, "[[[[[[[]]]]]]]]]]]]]]]]]]]]]]]")
         return jsonify({"message": "Note not found!", "status_code": 404})
     db.session.delete(note)
     db.session.commit()
