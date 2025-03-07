@@ -1,6 +1,6 @@
 from flask import Blueprint,request,jsonify
 from flask_jwt_extended import get_jwt_identity, jwt_required
-from sqlalchemy.orm.collections import collection
+from sqlalchemy.orm.attributes import flag_modified
 
 from database import db
 
@@ -15,16 +15,16 @@ def create_collection():
     user_id = get_jwt_identity()
     data = request.get_json()
 
-    new_collection = Collection(title=data['title'], user_id=user_id)
-    db.session.add(new_collection)
-    db.session.commit()
+    new_collection = Collection(title=data['title'], user_id=user_id, list_of_notes=[])
 
     note_ids = data.get('notes', [])
+    print(note_ids)
     if note_ids:
-        notes = Note.query.filter(Note.id.in_(note_ids)).all()
+        notes = Note.query.filter(Note.id.in_(note_ids),Note.user_id==user_id).all()
+        print(notes, "=============-=-=-=-=-=-=-=-")
         for note in notes:
-            note.collection_id = new_collection.id
-
+            new_collection.list_of_notes.append(note.id)
+    db.session.add(new_collection)
     db.session.commit()
 
     return jsonify({
@@ -37,18 +37,18 @@ def create_collection():
 def get_all_collections():
     user_id = get_jwt_identity()
     collections = Collection.query.filter_by(user_id=user_id).all()
-    if not collections:
-        return jsonify({"error": "collection not found"}), 404
     return jsonify([returningCollection.to_dict() for returningCollection in collections])
 
-@collections_bp.route('/collections/<int:id>', methods=['GET'])
+@collections_bp.route('/collections/<string:id>', methods=['GET'])
+@jwt_required()
 def get_collections(id):
     collections = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
     if not collections:
         return jsonify({"error": "collection not found"}), 404
     return jsonify(collections.to_dict())
 
-@collections_bp.route('/collections/<int:id>', methods=['PUT'])
+@collections_bp.route('/collections/<string:id>', methods=['PUT'])
+@jwt_required()
 def update_collection(id):
     collections = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
     if not collections:
@@ -59,10 +59,11 @@ def update_collection(id):
     return jsonify({"message": "Collection updated!", "collection": collections.to_dict()})
 
 
-@collections_bp.route('/collections/<int:id>/add_notes', methods=['POST'])
+@collections_bp.route('/collections/<string:id>/add_notes', methods=['POST'])
+@jwt_required()
 def add_notes_to_collection(id):
     user_id = get_jwt_identity()
-    collections = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
+    collections = Collection.query.filter_by(id=id, user_id=user_id).first()
     if not collections:
         return jsonify({"message": "Collection not found!",
                         "status_code": 404})
@@ -73,14 +74,17 @@ def add_notes_to_collection(id):
     if not isinstance(note_ids, list):
         return jsonify({"error": "note_ids must be a list"}), 400
 
-    valid_notes = Note.query.filter(Note.id.in_(note_ids)).all()
+    valid_notes = Note.query.filter(Note.id.in_(note_ids), Note.user_id==user_id).all()
 
     if not valid_notes:
         return jsonify({"error": "No valid notes found"}), 400
 
     for note in valid_notes:
-        note.collection_id = collections.id
+        print(note.id)
+        collections.list_of_notes.append(note.id)
+    print(collections.list_of_notes)
 
+    flag_modified(collections, "list_of_notes")
     db.session.commit()
 
     return jsonify({
@@ -88,9 +92,12 @@ def add_notes_to_collection(id):
         "collection": collections.to_dict()
     }), 200
 
-@collections_bp.route('/collections/<int:id>/remove_notes', methods=['DELETE'])
+@collections_bp.route('/collections/<string:id>/remove_notes', methods=['DELETE'])
+@jwt_required()
 def remove_notes_from_collection(id):
-    collection = Collection.query.filter_by(id=id, user_id=get_jwt_identity()).first()
+    user_id = get_jwt_identity()
+    collection = Collection.query.filter_by(id=id, user_id=user_id).first()
+    list_of_notes = collection.list_of_notes
     if not collection:
         return jsonify({"message": "Collection not found!"}), 404
     print(collection)
@@ -101,16 +108,17 @@ def remove_notes_from_collection(id):
     if not isinstance(note_ids, list):
         return jsonify({"error": "notes must be a list"}), 400
 
-    # Ensure only notes that are in the collection are removed
+    valid_notes = Note.query.filter(Note.id.in_(note_ids), Note.user_id == user_id).all()
     removed_notes = []
-    for note_id in note_ids:
-        note = Note.query.get(note_id)
-        if not note or note not in collection.list_of_notes:
+    for note_id in valid_notes:
+        print((str(note_id)))
+        print(list_of_notes)
+        if note_id.id not in list_of_notes:
             return jsonify({"error": f"Note ID {note_id} is not in this collection"}), 400
+        list_of_notes.remove(note_id.id)  # Removes association instead of deleting the note
+        removed_notes.append(note_id.id)
 
-        collection.list_of_notes.remove(note)  # Removes association instead of deleting the note
-        removed_notes.append(note_id)
-
+    flag_modified(collection, "list_of_notes")
     db.session.commit()
 
     return jsonify({
@@ -119,7 +127,8 @@ def remove_notes_from_collection(id):
         "collection": collection.to_dict()
     }), 200
 
-@collections_bp.route('/collections/<int:id>/', methods=['DELETE'])
+@collections_bp.route('/collections/<string:id>/', methods=['DELETE'])
+@jwt_required()
 def delete_collection(id):
     user_id = get_jwt_identity()
     collection = Collection.query.filter_by(id=id,user_id=user_id).first()
