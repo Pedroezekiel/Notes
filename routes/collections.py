@@ -4,8 +4,8 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from database import db
 
-from models.Note import Note
-from models.Collection import Collection
+from models.note import Note
+from models.collection import Collection
 
 collections_bp = Blueprint('collections', __name__)
 
