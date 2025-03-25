@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from database import db
-from models.Note import Note
+from models.note import Note
 
 notes_bp = Blueprint('notes', __name__)
 
