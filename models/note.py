@@ -12,7 +12,9 @@ class Note(db.Model):
         return {
             "id": self.id,
             "title": self.title,
-            "content": self.content
+            "content": self.content,
+            "user_id": self.user_id
+            # "collection_id": self.collection_id if hasattr(self, 'collection_id') else None
         }
 
 

@@ -12,5 +12,6 @@ class Collection(db.Model):
         return {
             "id": self.id,
             "title": self.title,
-            "list_of_notes": self.list_of_notes if self.list_of_notes else []
+            "list_of_notes": self.list_of_notes if self.list_of_notes else [],
+            "user_id": self.user_id
         }
